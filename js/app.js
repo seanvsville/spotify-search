@@ -1,41 +1,73 @@
 // wait for DOM to load before running JS
 $(document).on('ready', function() {
 
-// form submit function to feed into onSuccess function
-  $("form").on("submit", function (event) {
+  // check to make sure JS is loaded
+  console.log('JS is loaded!');
+
+  // form to search spotify API
+  var $spotifySearch = $('#spotify-search');
+
+  // input field for track (song)
+  var $track = $('#track');
+
+  // element to hold results from spotify API
+  var $results = $('#results');
+
+  // loading gif
+  var $loading = $('#loading');
+
+  // compile handlebars template
+  var source = $('#tracks-template').html();
+  var template = Handlebars.compile(source);
+
+  // submit form to search spotify API
+  $spotifySearch.on('submit', function handleFormSubmit(event) {
     event.preventDefault();
-    $("#tracks").empty();
-    callTrack();
+
+    // empty previous results
+    $results.empty();
+
+    // save form data to variable
+    var searchTrack = $track.val();
+
+    // only search if the form had a keyword to search with!
+    if (searchTrack !== ""){
+      // show loading gif
+      $loading.show();
+      // spotify search URL
+      var searchUrl = 'https://api.spotify.com/v1/search?type=track&q=' + searchTrack;
+
+      // use AJAX to call spotify API
+      $.ajax({
+        url: searchUrl,
+        method: 'GET',
+        success: renderSpotifyData  // use this function as the callback
+      });
+    } else {
+      alert("Please enter a keyword to search");
+    }
+
+    // reset the form
+    $spotifySearch[0].reset();
+    $track.focus();
   });
 
-// wrap ajax call into callTrack function
-  function callTrack() {
-    $.ajax({
-      type: 'GET',
-      url: "https://api.spotify.com/v1/search",
-      data: $("form").serialize(),
-      success: onSuccess,
-      error: onError,
-    });
 
-// define onSuccess function to append and create list item with artist name and song title
-// and album art
-    function onSuccess(data) {
-      data.tracks.items.forEach(function(element) {
-        $("#tracks").append(element.artists[0].name + " - " +
-        element.name + "<p>" + '<img src="' +
-        element.album.images[2].url + '">' + "</p>");
+  function renderSpotifyData(data) {
+    // track results are in an array called `items`
+    // which is nested in the `tracks` object
+    var trackResults = data.tracks.items;
+    console.log(trackResults);
 
-      });
-    }
+    // hide loading gif
+    $loading.hide();
 
-// define function for onError
-    function onError(xhr, status, errorThrown) {
-      alert("Sorry, there was a problem!");
-      console.log("Error: " + errorThrown);
-      console.log("Status: " + status);
-      console.dir(xhr);
-    }
+    // pass in data to render in the template
+    var trackHtml = template({ tracks: trackResults });
+
+    // append html to the view
+    $results.append(trackHtml);
   }
+
 
 });
